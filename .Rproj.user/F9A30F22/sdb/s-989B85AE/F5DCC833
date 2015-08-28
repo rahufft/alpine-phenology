@@ -1,0 +1,18 @@
+{
+    "contents" : "---\ntitle: \"Alpine Phenology\"\nauthor: \"RA Hufft\"\ndate: \"August 28, 2015\"\noutput: word_document\n---\n\nThis is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.\n\nWhen you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:\n\n```{r}\nsummary(cars)\n```\n\nYou can also embed plots, for example:\n\n```{r, echo=FALSE}\nplot(cars)\n```\n\nNote that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.\n```{r}\n#Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/\nR_input_data/QR_r_input.csv\nbloom<-read.csv(file.choose(\"Q:\\\\Research\\\\All_Projects_by_Species\\\\\"),        \n                header = TRUE, as.is=TRUE)        \nhead(bloom)\nnames(bloom)\nstr(bloom)  #tells me column name, data type and examples\n#subset data to only include first bloom of each year\nfoo <- function(x){min(bloom$startDayOfYear~bloom$Year)}\n\nnames <- unique(bloom$Scientific.Name)\t\t# Names includes synonyms, sspListID contains unique taxa\n namesID <- unique(bloom$sppListID)\nlength(namesID)\t# 290\nhead(namesID)\nnames(bloom)\ntable(bloom$sppListID, bloom$startDayOfYear)\n\n#Climate data figures\n#This section runs linear regression on Avg High temp by Year\nhist(bloom$Avg_Hi)\nplot(bloom$Year,bloom$Avg_Hi, main=\"Average High Temperature by Year\",xlab=\"Year\", ylab=\"Degrees Celsius\")\nabline(lm(bloom$Avg_Hi~bloom$Year))\nsummary(lm(bloom$Avg_Hi~bloom$Year))\nplot(lm(bloom$Avg_Hi~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity\n\n#This section runs linear regression on Avg Low temp by Year\nhist(bloom$Avg_Lo)\nplot(bloom$Year,bloom$Avg_Lo, main=\"Average Low Temperature by Year\",xlab=\"Year\", ylab=\"Degrees Celsius\")\nabline(lm(bloom$Avg_Lo~bloom$Year))\nsummary(lm(bloom$Avg_Lo~bloom$Year))\nplot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity\n\n\n#This section runs linear regression on Precipitation by Year\nhist(bloom$Raw_Precip)\nplot(bloom$Year,bloom$Raw_Precip, main=\"Precipitation by Year\",xlab=\"Year\", ylab=\"Precipitation (mm)\")\nabline(lm(bloom$Raw_Precip~bloom$Year))\nsummary(lm(bloom$Raw_Precip~bloom$Year))\nplot(lm(bloom$Raw_Precip ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity\n```\n\n\n",
+    "created" : 1440788078402.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "922146729",
+    "id" : "F5DCC833",
+    "lastKnownWriteTime" : 1440791717,
+    "path" : "P:/alpine-phenology/Climate.Rmd",
+    "project_path" : "Climate.Rmd",
+    "properties" : {
+        "tempName" : "Untitled2"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "type" : "r_markdown"
+}
