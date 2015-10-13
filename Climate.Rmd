@@ -22,8 +22,8 @@ plot(cars)
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ```{r}
 #Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/
-R_input_data/QR_r_input.csv
-bloom<-read.csv(file.choose("P://alpine-phenology/TB_tempPrecipData"),        
+
+bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
                 header = TRUE, as.is=TRUE)    
 #created new column that divides Raw_precip by 100 (see PRISM documentation) to get mm
 head(bloom)
@@ -51,6 +51,186 @@ plot(bloom$Year,bloom$Precip_mm, main="Precipitation by Year",xlab="Year", ylab=
 abline(lm(bloom$Precip_mm~bloom$Year))
 summary(lm(bloom$Precip_mm~bloom$Year))
 #plot(lm(bloom$Precip_mm ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+
+#Graph of all spp data by year
+bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
+                header = TRUE, as.is=TRUE)   
+hist(bloom$startDayOfYear)
+plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
+abline(lm(bloom$startDayOfYear~bloom$Year))
+summary(lm(bloom$startDayOfYear~bloom$Year)) 
+#both intercept and slope significant. If include all data, the date of first collection is statistically earlier by 0.062563/year, or 3.75 days earlier over the course of the study period. 
+#plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+
+#Graph just the significant spp by year to see how many days earlier for these species that are showing a signal by year
+#re-run code that runs regressions on each species to create table to subset from
+#Limit all data to after 1949, 7220 obs. from table (7217 obs. from query in Access)
+bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
+str(bl50)
+head(bl50)
+
+# Pull out the earliest bloom date per year per species
+foo <- function(x){min(bl50$startDayOfYear~bl50$Year)}
+
+ names <- unique(bl50$Scientific.Name)		# Names includes synonyms, sspListID contains unique taxa
+ namesID <- unique(bl50$sppListID)
+length(namesID)	# 290
+head(namesID)
+names(bl50)
+table(bl50$sppListID, bl50$startDayOfYear)
+
+# testing
+#namesID <- 3
+#vari <- "Year"
+#___START HERE NEXT TIME 20151013__________________________________________________
+
+JulBloomDate <- function(vari){	#vari <- "Year"; 
+setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/R_figures_alpine"))
+	namesID <- unique(bl50$sppListID)
+	rm(JYC)
+	JYC <- c()
+	stats<-c()
+
+	for(i in namesID){
+		spsub <- subset(bl50, sppListID == i)	
+		pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
+		val <- as.vector(pyr)
+		yrs <- as.numeric(names(pyr))
+		mins <- data.frame(cbind(julian = val, Year = yrs))
+			blnew <- c()
+				for(j in 1:nrow(mins)){
+					blnew <- rbind(blnew, 
+						subset(spsub, 
+							spsub$startDayOfYear == mins[j,1] 
+							& spsub$Year == mins[j,2]))
+			}
+	blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
+	jpeg(filename = paste(blnew$Scientific.Name[1], vari, ".jpg"),
+		quality = 100)
+colnum <- match(vari,names(blnew))
+	plot(blnew[,colnum], blnew$startDayOfYear, 
+		main = paste(blnew$Scientific.Name[1], vari, sep = ""), 
+		cex.main = 0.85,
+		xlab = paste(vari),
+		ylab = "Julian date of first bloom")
+abline(lm(blnew$startDayOfYear~blnew[,colnum]))
+dev.off()
+graphics.off()
+foo1 <- summary(lm(blnew$startDayOfYear~blnew[,colnum]))
+jul.yr.coef <- data.frame(
+			cbind(
+				data.frame(t(foo1$coefficients[2,])),
+				foo1$coefficients[1,1],
+				t(foo1$fstatistic),
+				Species = blnew$Scientific.Name[1],
+				foo1$adj.r.squared))
+JYC <- rbind(JYC, jul.yr.coef)
+}
+
+str(JYC)
+colnames(JYC) <- c("Slope", "StErr", "t.value", "p.value", "Intercept", 
+			"F Stat", "numDF","denDF", "Species", "adj.r.squ")
+
+JYC <<- JYC
+}
+
+
+
+
+
+########## Columns that you can use to compare to earliest bloom date (taken from "startDayOfYear")
+names(bl50)
+                
+#[11] "startDayOfYear"   [20] "Raw_Precip"              
+#[21] "Avg_Hi"                "Med_Hi"                  
+#[23] "Avg_Lo"                "Med_Lo"                  
+#[25] "Av_Temp"               "Med_Temp"  
+
+#run each of the 4 following codes separately
+
+JulBloomDate("Year")
+	YearJYC <- JYC 
+
+JulBloomDate("Raw_Precip")
+	RawPrecipJYC <- JYC 
+
+JulBloomDate("Avg_Hi")
+	AvgHiJYC <- JYC 
+
+JulBloomDate("Avg_Lo")
+	AvgLoJYC <- JYC 
+
+#then run each of these lines for each of the above & past in Excel
+
+write.table(JYC[1:100,], "clipboard", sep="\t", row.names = F, col.names = T)
+write.table(JYC[101:200,], "clipboard", sep="\t", row.names = F, col.names = T)
+write.table(JYC[201:290,], "clipboard", sep="\t", row.names = F, col.names = T)
+
+###
+
+
+## Categorize slope
+names(JYC)
+negsl <- subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
+
+# How many
+length(negsl)
+negsl$Species
+
+## Merge Year, precip, temp...
+merge(YearJYC, RawPrecipJYC, by = "Species")
+
+
+
+# cannot put the whole table, "JYC" into Excel w/ ctrl V - too big
+
+# species where bloom date is signficantly getting earlier (JYC is the whole table):
+subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
+earlier_bloom <- subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
+# puts table "earlier_bloom" into Exel w/ ctrl V
+write.table (earlier_bloom,"clipboard", sep = "\t", row.names = FALSE, col.names = TRUE)
+
+# species where bloom date is signficantly getting later: None
+subset(JYC, JYC$Slope > 0 & JYC$p.value < 0.05)
+later_bloom <- subset(JYC, JYC$Slope > 0 & JYC$p.value < 0.05)
+# puts table "later_bloom" into Exel w/ ctrl V
+write.table (later_bloom,"clipboard", sep = "\t", row.names = FALSE, col.names = TRUE)
+
+
+#################	###################################### ######################### ############################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#merge two tables
+merge(stats, bloom, by = intersect(names(x), names(y)),
+      by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all,
+      sort = TRUE, suffixes = c(".x",".y"),
+      incomparables = NULL, ...)
+
+hist(bloom$startDayOfYear)
+plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
+abline(lm(bloom$startDayOfYear~bloom$Year))
+summary(lm(bloom$startDayOfYear~bloom$Year))
+#plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 ```
+
+
+
 
 

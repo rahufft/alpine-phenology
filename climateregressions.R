@@ -30,3 +30,11 @@ abline(lm(bloom$Raw_Precip~bloom$Year))
 summary(lm(bloom$Raw_Precip~bloom$Year))
 plot(lm(bloom$Raw_Precip ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 
+#Graph of all spp data by year
+hist(bloom$startDayOfYear)
+plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
+abline(lm(bloom$startDayOfYear~bloom$Year))
+summary(lm(bloom$startDayOfYear~bloom$Year))
+plot(lm(bloom$Raw_Precip ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+
+
