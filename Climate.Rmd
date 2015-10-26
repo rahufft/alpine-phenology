@@ -82,7 +82,7 @@ table(bl50$sppListID, bl50$startDayOfYear)
 # testing
 #namesID <- 3
 #vari <- "Year"
-#___START HERE NEXT TIME 20151013__________________________________________________
+######I'm not clear what JulBloomDate is and why it is necessary......
 
 JulBloomDate <- function(vari){	#vari <- "Year"; 
 setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/R_figures_alpine"))
@@ -90,49 +90,6 @@ setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGI
 	rm(JYC)
 	JYC <- c()
 	stats<-c()
-
-	for(i in namesID){
-		spsub <- subset(bl50, sppListID == i)	
-		pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
-		val <- as.vector(pyr)
-		yrs <- as.numeric(names(pyr))
-		mins <- data.frame(cbind(julian = val, Year = yrs))
-			blnew <- c()
-				for(j in 1:nrow(mins)){
-					blnew <- rbind(blnew, 
-						subset(spsub, 
-							spsub$startDayOfYear == mins[j,1] 
-							& spsub$Year == mins[j,2]))
-			}
-	blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
-	jpeg(filename = paste(blnew$Scientific.Name[1], vari, ".jpg"),
-		quality = 100)
-colnum <- match(vari,names(blnew))
-	plot(blnew[,colnum], blnew$startDayOfYear, 
-		main = paste(blnew$Scientific.Name[1], vari, sep = ""), 
-		cex.main = 0.85,
-		xlab = paste(vari),
-		ylab = "Julian date of first bloom")
-abline(lm(blnew$startDayOfYear~blnew[,colnum]))
-dev.off()
-graphics.off()
-foo1 <- summary(lm(blnew$startDayOfYear~blnew[,colnum]))
-jul.yr.coef <- data.frame(
-			cbind(
-				data.frame(t(foo1$coefficients[2,])),
-				foo1$coefficients[1,1],
-				t(foo1$fstatistic),
-				Species = blnew$Scientific.Name[1],
-				foo1$adj.r.squared))
-JYC <- rbind(JYC, jul.yr.coef)
-}
-
-str(JYC)
-colnames(JYC) <- c("Slope", "StErr", "t.value", "p.value", "Intercept", 
-			"F Stat", "numDF","denDF", "Species", "adj.r.squ")
-
-JYC <<- JYC
-}
 
 
 
