@@ -5,26 +5,31 @@ date: "August 28, 2015"
 output: word_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+`install.packages(RCurl)` if you want it
 
 ```{r}
-summary(cars)
+library(RCurl)
+library(ggplot2)
 ```
 
-You can also embed plots, for example:
-
+Bring csv in from the website
+I get an error: `Error in str.default(obj, ...) : invalid multibyte string 2` but will see if it matters...   
+looks like it's the lat long that didn't get in correctly
 ```{r, echo=FALSE}
-plot(cars)
+bloom<-read.csv(text = getURL("https://raw.githubusercontent.com/rahufft/alpine-phenology/master/QR_final_R_plant_climate_data.csv"))
+
+head(bloom)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ```{r}
 #Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/
 
-bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
-                header = TRUE, as.is=TRUE)    
+#bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
+#                header = TRUE, as.is=TRUE)   
+```
+
+```{r}
 #created new column that divides Raw_precip by 100 (see PRISM documentation) to get mm
 head(bloom)
 names(bloom)
@@ -37,13 +42,19 @@ plot(bloom$Year,bloom$Avg_Hi, main="Average High Temperature by Year",xlab="Year
 abline(lm(bloom$Avg_Hi~bloom$Year))
 summary(lm(bloom$Avg_Hi~bloom$Year))
 #plot(lm(bloom$Avg_Hi~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+```
 
+```{r}
 #This section runs linear regression on Avg Low temp by Year
 #hist(bloom$Avg_Lo)
 plot(bloom$Year,bloom$Avg_Lo, main="Average Low Temperature by Year",xlab="Year", ylab="Degrees Celsius")
 abline(lm(bloom$Avg_Lo~bloom$Year))
 summary(lm(bloom$Avg_Lo~bloom$Year))
 #plot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+```
+
+
+```{r}
 
 #This section runs linear regression on Precipitation by Year
 #hist(bloom$Precip_mm)
@@ -51,11 +62,14 @@ plot(bloom$Year,bloom$Precip_mm, main="Precipitation by Year",xlab="Year", ylab=
 abline(lm(bloom$Precip_mm~bloom$Year))
 summary(lm(bloom$Precip_mm~bloom$Year))
 #plot(lm(bloom$Precip_mm ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+```
 
-#Graph of all spp data by year
-#*****NEED TO REDO THIS AND ONLY USE FIRST COLLECTION DATE FOR EACH YEAR...RIGHT NOW MULTIPLE DATES PER YEAR***************************************************************************
-bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
-                header = TRUE, as.is=TRUE)   
+
+Graph of all spp data by year
+NEED TO REDO THIS AND ONLY USE FIRST COLLECTION DATE FOR EACH YEAR...RIGHT NOW MULTIPLE DATES PER YEAR***************************************************************************
+```{r}
+#bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
+#                header = TRUE, as.is=TRUE)   
 hist(bloom$startDayOfYear)
 plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
 abline(lm(bloom$startDayOfYear~bloom$Year))
@@ -69,10 +83,11 @@ summary(lm(bloom$startDayOfYear~bloom$Year))
 bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
 str(bl50)
 head(bl50)
+```
 
-# Pull out the earliest bloom date per year per species
-#foo <- function(x){min(bl50$startDayOfYear~bl50$Year)}
 
+Pull out the earliest bloom date per year per species
+```{r}
  names <- unique(bl50$Scientific.Name)		# Names includes synonyms, sspListID contains unique taxa
  namesID <- unique(bl50$sppListID)
 length(namesID)	# 290
@@ -80,66 +95,181 @@ head(namesID)
 names(bl50)
 table(bl50$sppListID, bl50$startDayOfYear)
 
-# testing
-#namesID <- 3
-#vari <- "Year"
-######I'm not clear what JulBloomDate is and why it is necessary......
-#For testing the function
-i<-unique(bl50$sppListID)[1]
-table(bl50$sppListID,bl50$Year)
+```
 
-JulBloomDate <- function(vari){	#vari <- "Year"; 
-#setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/R_figures_alpine"))
-	namesID <- unique(bl50$sppListID)
+The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", "Avg_Lo"...  
+test the function:
+```{r}
+# testing
+namesID <- 3
+vari <- "Year"
+######I'm not clear what JulBloomDate is and why it is necessary......
+#For testing the function and loop
+i<-unique(bl50$sppListID)[1]
+table(bl50$sppListID[bl50$sppListID==i],bl50$Year[bl50$sppListID==i])
+
+```
+
+## Break up the function into gathering the earliest bloom day per year seperate from regression per species
+So slow
+```{r}
+
+namesID <- unique(bl50$sppListID)
+blnew <- c()
+
+for(i in namesID){
+  spsub <- subset(bl50, sppListID == i)
+  pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
+  val <- as.vector(pyr)
+  yrs <- as.numeric(names(pyr))
+  mins <- data.frame(cbind(julian = val, Year = yrs))
+  blnew <- c()
+  
+  for(j in 1:nrow(mins)){
+    blnew <- rbind(blnew, subset(spsub,spsub$startDayOfYear == mins[j,1] & spsub$Year == mins[j,2]))
+    }
+  
+  #blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
+  blnew <- rbind(blnew,blnew)
+  }
+    
+head(blnew)
+nrow(blnew) #What?!  40 rows doesn't make any sense!
+```
+
+
+
+try sapply or lapply faster method  
+Still working on it... 10/28/15
+
+```{r,eval=FALSE}
+minJul.dates <- lapply(unique(bl50$sppListID), function(x){
+  this.species <- bl50[bl50$sppListID == x,]
+  sapply(unique(this.species$Year), function(y){ #I want a vector back, not a list
+    applythis.species[this.species$Year==y & this.species$startDayOfYear == min(this.species$startDayOfYear),]
+    #this.sp.this.year <- this.species[this.species$Year == y,]
+    #this.sp.this.year[bl50$startDayOfYear == y & min()
+    })
+  })
+
+minJul.dates[[2]]
+```
+
+Aggregate instead of apply?
+Much faster and more corrector!
+```{r}
+#This gives me the year and 
+minJul.dates <- lapply(unique(bl50$sppListID), function(x){
+  this.species <- bl50[bl50$sppListID == x,]
+  these.rows <- aggregate(startDayOfYear~Year, this.species, FUN=min)
+  matches <- match(interaction(this.species$Year,this.species$startDayOfYear),
+        interaction(these.rows$Year, these.rows$startDayOfYear))
+  bl50[1:nrow(bl50) %in% matches, ]
+  })
+
+str(minJul.dates)
+
+min.dates <- do.call(rbind,minJul.dates)
+head(min.dates)
+
+```
+
+
+ggplot option after subset to earliest observation per year per species
+```{r}
+ggplot(min.dates, aes(Year,Avg_Hi))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Average High Temperature by Year")+
+  xlab("Year")+
+  ylab("Degrees Celsius")
+```
+
+```{r}
+ggplot(min.dates, aes(Year,Avg_Lo))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Average Low Temperature by Year")+
+  xlab("Year")+
+  ylab("Degrees Celsius")
+
+
+```
+
+```{r}
+ggplot(min.dates, aes(Year,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Year")+
+  xlab("Year")+
+  ylab("Julian Date")
+
+
+```
+
+
+Regression per species
+```{r}
+JulBloomDate <- function(vari){
+  
+  #setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/R_figures_alpine"))
+  
+  namesID <- unique(bl50$sppListID)
 	rm(JYC)
 	JYC <- c()
 	stats<-c()
 
 	for(i in namesID){
-		spsub <- subset(bl50, sppListID == i)	
+    spsub <- subset(bl50, sppListID == i)	
 		pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
 		val <- as.vector(pyr)
 		yrs <- as.numeric(names(pyr))
 		mins <- data.frame(cbind(julian = val, Year = yrs))
-			blnew <- c()
-				for(j in 1:nrow(mins)){
-					blnew <- rbind(blnew, 
-						subset(spsub, 
-							spsub$startDayOfYear == mins[j,1] 
-							& spsub$Year == mins[j,2]))
-			}
-	blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
-#	jpeg(filename = paste(blnew$Scientific.Name[1], vari, ".jpg"),
-#		quality = 100)
-colnum <- match(vari,names(blnew))
-#	plot(blnew[,colnum], blnew$startDayOfYear, 
-#		main = paste(blnew$Scientific.Name[1], vari, sep = ""), 
-#		cex.main = 0.85,
-#		xlab = paste(vari),
-#		ylab = "Julian date of first bloom")
-#abline(lm(blnew$startDayOfYear~blnew[,colnum]))
-#dev.off()
-#graphics.off()
-foo1 <- summary(lm(blnew$startDayOfYear~blnew[,colnum]))
-jul.yr.coef <- data.frame(
-			cbind(
-				data.frame(t(foo1$coefficients[2,])),
-				foo1$coefficients[1,1],
-				t(foo1$fstatistic),
-				Species = blnew$Scientific.Name[1],
-				foo1$adj.r.squared))
-JYC <- rbind(JYC, jul.yr.coef)
-}
+    blnew <- c()
+    for(j in 1:nrow(mins)){
+      blnew <- rbind(blnew,
+                     subset(spsub,
+                            spsub$startDayOfYear == mins[j,1]
+                            & spsub$Year == mins[j,2]))
+      }
+    blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
 
-str(JYC)
-colnames(JYC) <- c("Slope", "StErr", "t.value", "p.value", "Intercept", 
-			"F Stat", "numDF","denDF", "Species", "adj.r.squ")
+    #	jpeg(filename = paste(blnew$Scientific.Name[1], vari, ".jpg"),
+    #		quality = 100)
+    
+    #Which column number has the variable of interest
+    colnum <- match(vari,names(blnew))
 
-JYC
-}
+    #Plot and save the individual species plot
+    #	plot(blnew[,colnum], blnew$startDayOfYear, 
+    #		main = paste(blnew$Scientific.Name[1], vari, sep = ""), 
+    #		cex.main = 0.85,
+    #		xlab = paste(vari),
+    #		ylab = "Julian date of first bloom")
+    #abline(lm(blnew$startDayOfYear~blnew[,colnum]))
+    #dev.off()
+    #graphics.off()
+
+    foo1 <- summary(lm(blnew$startDayOfYear~blnew[,colnum]))
+    jul.yr.coef <- data.frame(cbind(data.frame(t(foo1$coefficients[2,])),
+                                    foo1$coefficients[1,1],
+                                    t(foo1$fstatistic),
+                                    Species = blnew$Scientific.Name[1],
+                                    foo1$adj.r.squared))
+    JYC <- rbind(JYC, jul.yr.coef)
+    }
+  
+  colnames(JYC) <- c("Slope", "StErr", "t.value", "p.value", "Intercept", 
+                     "F Stat", "numDF","denDF", "Species", "adj.r.squ")
+  
+  JYC
+  }
 
 
-
+```
 
 
 
@@ -153,20 +283,30 @@ names(bl50)
 
 #run each of the 4 following codes separately
 
+```{r}
 JulBloomDate("Year")
 	YearJYC <- JYC 
+```
 
+```{r}
 JulBloomDate("Raw_Precip")
 	RawPrecipJYC <- JYC 
+```
 
+
+
+```{r}
 JulBloomDate("Avg_Hi")
 	AvgHiJYC <- JYC 
+```
 
+```{r}
 JulBloomDate("Avg_Lo")
 	AvgLoJYC <- JYC 
+```
 
-#then run each of these lines for each of the above & past in Excel
-
+then run each of these lines for each of the above & past in Excel
+```{r}
 write.table(JYC[1:100,], "clipboard", sep="\t", row.names = F, col.names = T)
 write.table(JYC[101:200,], "clipboard", sep="\t", row.names = F, col.names = T)
 write.table(JYC[201:290,], "clipboard", sep="\t", row.names = F, col.names = T)
