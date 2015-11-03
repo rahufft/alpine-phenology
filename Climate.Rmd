@@ -5,8 +5,8 @@ date: "August 28, 2015"
 output: word_document
 ---
 
-`install.packages(RCurl)` if you want it
-
+`install.packages("RCurl")` if you want it
+install.packages("ggplot2")
 ```{r}
 library(RCurl)
 library(ggplot2)
@@ -23,6 +23,8 @@ head(bloom)
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 ```{r}
+bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"))
+
 #Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/
 
 #bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
@@ -159,9 +161,13 @@ Aggregate instead of apply?
 Much faster and more corrector!
 ```{r}
 #This gives me the year and 
+sort(unique(bl50$sppListID))
+
 minJul.dates <- lapply(unique(bl50$sppListID), function(x){
   this.species <- bl50[bl50$sppListID == x,]
   these.rows <- aggregate(startDayOfYear~Year, this.species, FUN=min)
+  
+  # should try %in% for two columns
   matches <- match(interaction(this.species$Year,this.species$startDayOfYear),
         interaction(these.rows$Year, these.rows$startDayOfYear))
   bl50[1:nrow(bl50) %in% matches, ]
@@ -171,7 +177,13 @@ str(minJul.dates)
 
 min.dates <- do.call(rbind,minJul.dates)
 head(min.dates)
+table(min.dates$Year,min.dates$sppListID)
 
+
+#testing
+table(this.species$Year,this.species$sppListID)
+head(matches)
+table(matches$Year,matches$sppListID)
 ```
 
 
