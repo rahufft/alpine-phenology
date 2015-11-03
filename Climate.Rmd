@@ -5,11 +5,12 @@ date: "August 28, 2015"
 output: word_document
 ---
 
-`install.packages(RCurl)` if you want it
-
+`install.packages("RCurl")` if you want it
+install.packages("ggplot2")
 ```{r}
 library(RCurl)
 library(ggplot2)
+library(data.table)
 ```
 
 Bring csv in from the website
@@ -21,8 +22,10 @@ bloom<-read.csv(text = getURL("https://raw.githubusercontent.com/rahufft/alpine-
 head(bloom)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+If not working to load from github:
 ```{r}
+bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"))
+
 #Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/
 
 #bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
@@ -57,11 +60,11 @@ summary(lm(bloom$Avg_Lo~bloom$Year))
 ```{r}
 
 #This section runs linear regression on Precipitation by Year
-#hist(bloom$Precip_mm)
-plot(bloom$Year,bloom$Precip_mm, main="Precipitation by Year",xlab="Year", ylab="Precipitation (mm)")
-abline(lm(bloom$Precip_mm~bloom$Year))
-summary(lm(bloom$Precip_mm~bloom$Year))
-#plot(lm(bloom$Precip_mm ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+hist(bloom$Raw_Precip)
+plot(bloom$Year,bloom$Raw_Precip, main="Precipitation by Year",xlab="Year", ylab="Precipitation (mm)")
+abline(lm(bloom$Raw_Precip~bloom$Year))
+summary(lm(bloom$Raw_Precip~bloom$Year))
+#plot(lm(bloom$Raw_Precip ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 ```
 
 
@@ -80,7 +83,9 @@ summary(lm(bloom$startDayOfYear~bloom$Year))
 #Graph just the significant spp by year to see how many days earlier for these species that are showing a signal by year
 #re-run code that runs regressions on each species to create table to subset from
 #Limit all data to after 1949, 7220 obs. from table (7217 obs. from query in Access)
-bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
+nrow(bl50)
+nrow(subset(bloom, bloom$year_plant > 1949))
+#bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
 str(bl50)
 head(bl50)
 ```
@@ -93,7 +98,7 @@ Pull out the earliest bloom date per year per species
 length(namesID)	# 290
 head(namesID)
 names(bl50)
-table(bl50$sppListID, bl50$startDayOfYear)
+table(bl50$sppListID, bl50$Year)
 
 ```
 
@@ -137,41 +142,58 @@ head(blnew)
 nrow(blnew) #What?!  40 rows doesn't make any sense!
 ```
 
-
-
-try sapply or lapply faster method  
-Still working on it... 10/28/15
-
-```{r,eval=FALSE}
-minJul.dates <- lapply(unique(bl50$sppListID), function(x){
-  this.species <- bl50[bl50$sppListID == x,]
-  sapply(unique(this.species$Year), function(y){ #I want a vector back, not a list
-    applythis.species[this.species$Year==y & this.species$startDayOfYear == min(this.species$startDayOfYear),]
-    #this.sp.this.year <- this.species[this.species$Year == y,]
-    #this.sp.this.year[bl50$startDayOfYear == y & min()
-    })
-  })
-
-minJul.dates[[2]]
-```
-
+## Earliest bloom date held in min.dates
 Aggregate instead of apply?
 Much faster and more corrector!
 ```{r}
 #This gives me the year and 
+
 minJul.dates <- lapply(unique(bl50$sppListID), function(x){
-  this.species <- bl50[bl50$sppListID == x,]
+  this.species <- bl50[bl50$sppListID == x,c(4:5,7,11,19:26)]
   these.rows <- aggregate(startDayOfYear~Year, this.species, FUN=min)
-  matches <- match(interaction(this.species$Year,this.species$startDayOfYear),
-        interaction(these.rows$Year, these.rows$startDayOfYear))
-  bl50[1:nrow(bl50) %in% matches, ]
+  unique(merge(this.species, these.rows, by = c("startDayOfYear","Year")))
   })
 
-str(minJul.dates)
+names(minJul.dates) <- unique(bl50$sppListID)
+
+head(minJul.dates[[219]])
 
 min.dates <- do.call(rbind,minJul.dates)
-head(min.dates)
 
+```
+
+Skip this chunk
+```{r, echo=FALSE}
+#testing
+
+  # should try %in% for two columns
+  matches <- unique(match(interaction(this.species$Year,this.species$startDayOfYear),
+        interaction(these.rows$Year, these.rows$startDayOfYear)))
+  matches <- matches[complete.cases(matches)]
+  
+  #substitute this:
+  which(outer(these.rows$Year, this.species$Year, "==") &
+          outer(these.rows$startDayOfYear,this.species$startDayOfYear, "=="),
+        arr.ind = TRUE)
+  
+   matches <- unique(which(outer(this.species$Year, these.rows$Year,"==") &
+          outer(this.species$startDayOfYear, these.rows$startDayOfYear,"=="),
+        arr.ind = TRUE))
+  
+  minsfoo <- this.species[1:nrow(this.species) %in% matches,]
+  table(minsfoo$Year,minsfoo$startDayOfYear)
+  
+  bl50[1:nrow(bl50) %in% matches, ]
+
+x <- 4
+foo <- unique(bl50[1:nrow(bl50) %in% matches, -1])
+table(foo$Year,foo$startDayOfYear)
+table(this.species$Year,this.species$sppListID)
+head(matches)
+table(matches$Year,matches$sppListID)
+
+head(min.dates)
+table(min.dates$Year,min.dates$sppListID)
 ```
 
 
@@ -207,7 +229,7 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
   xlab("Year")+
   ylab("Julian Date")
 
-
+ summary(lm(min.dates$startDayOfYear~min.dates$Year))
 ```
 
 
