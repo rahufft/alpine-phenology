@@ -254,7 +254,7 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
     
     
     
-Graph of all spp data by year
+Graph of all spp data by year using plot instead of ggplot
 
 ```{r}
 #bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
@@ -272,7 +272,7 @@ summary(lm(min.dates$startDayOfYear~min.dates$Year))
 
 
 #Regression per species
-#update regression loop to match pulling minimum dates above    
+#updated regression loop to match pulling minimum dates above    
 The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", or "Avg_Lo"...    
 
 ```{r}
