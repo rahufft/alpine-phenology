@@ -67,17 +67,6 @@ summary(lm(bloom$Precip_mm~bloom$Year))
 ```
 
 
-Graph of all spp data by year
-NEED TO REDO THIS AND ONLY USE FIRST COLLECTION DATE FOR EACH YEAR...RIGHT NOW MULTIPLE DATES PER YEAR***************************************************************************
-```{r}
-#bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
-#                header = TRUE, as.is=TRUE)   
-hist(bloom$startDayOfYear)
-plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
-abline(lm(bloom$startDayOfYear~bloom$Year))
-summary(lm(bloom$startDayOfYear~bloom$Year)) 
-#both intercept and slope significant. If include all data, the date of first collection is statistically earlier by 0.062563/year, or 3.75 days earlier over the course of the study period. 
-#plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 
 #Graph just the significant spp by year to see how many days earlier for these species that are showing a signal by year
 #re-run code that runs regressions on each species to create table to subset from
@@ -103,9 +92,9 @@ The variable can be set to which variable you want to use. Choose from "Year", "
 test the function:
 ```{r}
 # testing
-namesID <- 3
+namesID <- 290
 vari <- "Year"
-######I'm not clear what JulBloomDate is and why it is necessary......
+
 #For testing the function and loop
 i<-unique(bl50$sppListID)[1]
 table(bl50$sppListID[bl50$sppListID==i],bl50$Year[bl50$sppListID==i])
@@ -181,9 +170,9 @@ table(min.dates$Year,min.dates$sppListID)
 
 
 #testing
-table(this.species$Year,this.species$sppListID)
-head(matches)
-table(matches$Year,matches$sppListID)
+#table(this.species$Year,this.species$sppListID)
+#head(matches)
+#table(matches$Year,matches$sppListID)
 ```
 
 
@@ -221,9 +210,28 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
 
 
 ```
+Graph of all spp data by year
 
+```{r}
+#bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
+#                header = TRUE, as.is=TRUE)   
+hist(min.dates$startDayOfYear)#need to log transform data
+logDay<-log(min.dates$startDayOfYear)
+hist(logDay)#better...still left-skewed
+invDay<-1/(min.dates$startDayOfYear)
+hist(invDay)#more even, but right-skewed
+sqrtDay<-sqrt(min.dates$startDayOfYear)
+hist(sqrtDay)#still left skewed
+plot(min.dates$Year,min.dates$startDayOfYear, main="First Collection Date for All 
+Species",xlab="Year", ylab="Julian Date")
+abline(lm(min.dates$startDayOfYear~min.dates$Year))
+summary(lm(min.dates$startDayOfYear~min.dates$Year)) 
+#both intercept and slope significant. If include all data, the date of first collection is statistically earlier by 0.062563/year, or 3.75 days earlier over the course of the study period. 
+#plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+```
 
-Regression per species
+#Regression per species
+#update regression loop to match pulling minimum dates above
 ```{r}
 JulBloomDate <- function(vari){
   
