@@ -373,6 +373,38 @@ ggplot(precip.sig.min, aes(Raw_Precip,startDayOfYear))+
 
 
 
+# multiple linear regression
+
+```{r}
+  namesID <- unique(min.dates$sppListID)
+  
+  ml.JYC <- lapply(namesID, function(x){
+    blnew <- min.dates[min.dates$sppListID == x,]
+    foo1 <- summary(lm(startDayOfYear~Raw_Precip*Avg_Lo, data = blnew))
+    jul.yr.coef <- data.frame(row.names(foo1$coefficients[-1,]),
+                              foo1$coefficients[-1,],
+                              foo1$coefficients[1,1],
+                              t(foo1$fstatistic),
+                              Species = blnew$Scientific.Name[1],
+                              foo1$adj.r.squared)
+    })
+  
+  ml.JYC <- do.call(rbind, ml.JYC)
+  colnames(ml.JYC) <- c("Variables", "Slope", "StErr", "t.value", "p.value", "Intercept", 
+                   "F Stat", "numDF","denDF", "Species", "adj.r.squ")
+  head(ml.JYC)
+
+sig.ml.JYC <- ml.JYC[ml.JYC$p.value < 0.05,]
+
+# there are 19 species significant for Avg_Lo, 15 for Raw_Precip, and 14 for the interaction 
+table(sig.ml.JYC$Variables)
+
+
+
+```
+
+
+
 
 
 
