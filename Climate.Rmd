@@ -398,10 +398,58 @@ sig.ml.JYC <- ml.JYC[ml.JYC$p.value < 0.05,]
 
 # there are 19 species significant for Avg_Lo, 15 for Raw_Precip, and 14 for the interaction 
 table(sig.ml.JYC$Variables)
+```
 
 
+Species signficantly changing with the interaction of precipitation and low temperature
+```{r}
+sig.interaction.JYC <- ml.JYC[ml.JYC$p.value < 0.05 & ml.JYC$Variables == "Raw_Precip:Avg_Lo",]
+
+sig.in.merge <- merge(sig.interaction.JYC, min.dates, by.x = "Species",
+                      by.y = "Scientific.Name")
+
+
+ggplot(sig.in.merge, aes(Year,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Year")+
+  xlab("Year")+
+  ylab("Julian Date")
+
+ summary(lm(startDayOfYear~Year, data = sig.in.merge))
 
 ```
+
+Signficant interaction species     
+Precip
+```{r}
+ggplot(sig.in.merge, aes(Raw_Precip,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Year")+
+  xlab("Year")+
+  ylab("Julian Date")
+
+ summary(lm(startDayOfYear~Raw_Precip, data = sig.in.merge))
+
+```
+
+
+```{r}
+ggplot(sig.in.merge, aes(Avg_Lo,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Year")+
+  xlab("Year")+
+  ylab("Julian Date")
+
+ summary(lm(startDayOfYear~Avg_Lo, data = sig.in.merge))
+
+```
+
 
 
 
