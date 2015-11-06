@@ -6,8 +6,7 @@ output: word_document
 ---
 
 `install.packages("RCurl")` if you want it
-`install.packages("ggplot2")`
-`install.packages("data.table")`
+`install.packages("ggplot2")`   
 
 #Try a `rm(list=ls())` before running
 
@@ -133,6 +132,8 @@ head(minJul.dates[[219]])
 
 min.dates <- do.call(rbind,minJul.dates)
 
+table(min.dates$Year, min.dates$sppListID)
+
 ```
 
 
@@ -143,9 +144,24 @@ mpy.df <- data.frame(minpyear)
 mpy.df[mpy.df$Freq > 1,] #when we have ealiestBloomDate in the lapply, that's not unique so it picks a few duplicates, now fixed
 ```
 
+```{r}
+library(psych)
+cor.plot(cor(min.dates[,-(1:4)]), numbers = TRUE)
+# should keep Raw_Precip and Avg_Lo
+
+cor(min.dates[,-(1:4)])
+
+#getting a ggplot error of "Error in .Call.graphics(C_palette2, .Call(C_palette2, NULL)) : 
+#  invalid graphics state"
+
+#fix error by running dev.off()
+dev.off()
+
+```
 
 
-ggplot option after subset to earliest observation per year per species
+ggplot option after subset to earliest observation per year per species    
+Avg high temperature    
 ```{r}
 ggplot(min.dates, aes(Year,Avg_Hi))+
   geom_point()+
@@ -157,6 +173,17 @@ ggplot(min.dates, aes(Year,Avg_Hi))+
 ```
 
 ```{r}
+ggplot(min.dates, aes(Avg_Hi, startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Average High Temperature") +
+  xlab("Degrees Celsius")+
+  ylab("Julian Date")
+```
+
+Average low temperature
+```{r}
 ggplot(min.dates, aes(Year,Avg_Lo))+
   geom_point()+
   stat_smooth(method="lm")+
@@ -165,9 +192,52 @@ ggplot(min.dates, aes(Year,Avg_Lo))+
   xlab("Year")+
   ylab("Degrees Celsius")
 
-
 ```
-#add above ggplot code for precip
+
+```{r}
+ggplot(min.dates, aes(Avg_Lo, startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Average Low Temperature") +
+  xlab("Degrees Celsius")+
+  ylab("Julian Date")
+
+summary(lm(startDayOfYear~Avg_Lo, data = min.dates))
+```
+
+
+
+
+
+Average precipitation
+```{r}
+ggplot(min.dates, aes(Year,Raw_Precip))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Average Precipitation by Year")+
+  xlab("Year")+
+  ylab("Precipitation (mm)")
+
+
+summary(lm(Raw_Precip~Year, data = min.dates))
+```
+
+```{r}
+ggplot(min.dates, aes(Raw_Precip, startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Average Precipitation") +
+  xlab("Precipitation (mm)")+
+  ylab("Julian Date")
+
+summary(lm(startDayOfYear~Raw_Precip, data = min.dates))
+```
+
+
+
 
 ### Minimum Julian bloom date by year
 ```{r}
@@ -184,7 +254,7 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
     
     
     
-Graph of all spp data by year - using plot instead of ggplot
+Graph of all spp data by year
 
 ```{r}
 #bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
@@ -202,7 +272,8 @@ summary(lm(min.dates$startDayOfYear~min.dates$Year))
 
 
 #Regression per species
- The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", or "Avg_Lo"...    
+#update regression loop to match pulling minimum dates above    
+The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", or "Avg_Lo"...    
 
 ```{r}
 JulBloomDate <- function(variable){
