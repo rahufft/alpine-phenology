@@ -6,7 +6,10 @@ output: word_document
 ---
 
 `install.packages("RCurl")` if you want it
-install.packages("ggplot2")
+install.packages("ggplot2")   
+
+#Try a `rm(list=ls())` before running
+
 ```{r}
 library(RCurl)
 library(ggplot2)
@@ -36,7 +39,7 @@ bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.c
 #created new column that divides Raw_precip by 100 (see PRISM documentation) to get mm
 head(bloom)
 names(bloom)
-str(bloom)  #tells me column name, data type and examples
+str(bloom)  #tells me column name, data type and examples, errors in lat long when brought in from web
 
 #Climate data figures
 #This section runs linear regression on Avg High temp by Year
@@ -72,9 +75,13 @@ summary(lm(bloom$Raw_Precip~bloom$Year))
 #Graph just the significant spp by year to see how many days earlier for these species that are showing a signal by year
 #re-run code that runs regressions on each species to create table to subset from
 #Limit all data to after 1949, 7220 obs. from table (7217 obs. from query in Access)
+```{r}
+
+bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
+
 nrow(bl50)
 nrow(subset(bloom, bloom$year_plant > 1949))
-#bl50 <- subset(bloom, bloom$year_plant > 1949) #Our dataset already has this subset but re-running as a double check
+
 str(bl50)
 head(bl50)
 ```
@@ -87,58 +94,34 @@ Pull out the earliest bloom date per year per species
 length(namesID)	# 290
 head(namesID)
 names(bl50)
+
+#There are multiple bloom dates per year for many species. Want to narrow down to one, earliest, per year
 table(bl50$sppListID, bl50$Year)
 
 ```
 
-The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", "Avg_Lo"...  
-test the function:
+
+Don't worry about bloom vs. bl50, they are identical... and other checks    
 ```{r}
-# testing
-namesID <- 290
-vari <- "Year"
+#bl50 and bloom are the same
+identical(bl50, bloom)
 
-#For testing the function and loop
-i<-unique(bl50$sppListID)[1]
-table(bl50$sppListID[bl50$sppListID==i],bl50$Year[bl50$sppListID==i])
+#There should be 290 species
+length(unique(bl50$sppListID))
 
+#Only need some columns of bloom:bl50 for minimum julian dates
+names(bl50[,c(4:5,11,19:26)])
 ```
+
 
 ## Break up the function into gathering the earliest bloom day per year seperate from regression per species
-So slow
-```{r}
-
-namesID <- unique(bl50$sppListID)
-blnew <- c()
-
-for(i in namesID){
-  spsub <- subset(bl50, sppListID == i)
-  pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
-  val <- as.vector(pyr)
-  yrs <- as.numeric(names(pyr))
-  mins <- data.frame(cbind(julian = val, Year = yrs))
-  blnew <- c()
-  
-  for(j in 1:nrow(mins)){
-    blnew <- rbind(blnew, subset(spsub,spsub$startDayOfYear == mins[j,1] & spsub$Year == mins[j,2]))
-    }
-  
-  #blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
-  blnew <- rbind(blnew,blnew)
-  }
-    
-head(blnew)
-nrow(blnew) #What?!  40 rows doesn't make any sense!
-```
-
 ## Earliest bloom date held in min.dates
 Aggregate instead of apply?
 Much faster and more corrector!
 ```{r}
-#This gives me the year and 
 
 minJul.dates <- lapply(unique(bl50$sppListID), function(x){
-  this.species <- bl50[bl50$sppListID == x,c(4:5,7,11,19:26)]
+  this.species <- bl50[bl50$sppListID == x,c(4:5,11,19:26)]
   these.rows <- aggregate(startDayOfYear~Year, this.species, FUN=min)
   unique(merge(this.species, these.rows, by = c("startDayOfYear","Year")))
   })
@@ -151,44 +134,14 @@ min.dates <- do.call(rbind,minJul.dates)
 
 ```
 
-Skip this chunk
-```{r, echo=FALSE}
-#testing
-#table(this.species$Year,this.species$sppListID)
-#head(matches)
-#table(matches$Year,matches$sppListID)
 
-
-  # should try %in% for two columns
-  matches <- unique(match(interaction(this.species$Year,this.species$startDayOfYear),
-        interaction(these.rows$Year, these.rows$startDayOfYear)))
-  matches <- matches[complete.cases(matches)]
-  
-  #substitute this:
-  which(outer(these.rows$Year, this.species$Year, "==") &
-          outer(these.rows$startDayOfYear,this.species$startDayOfYear, "=="),
-        arr.ind = TRUE)
-  
-   matches <- unique(which(outer(this.species$Year, these.rows$Year,"==") &
-          outer(this.species$startDayOfYear, these.rows$startDayOfYear,"=="),
-        arr.ind = TRUE))
-  
-  minsfoo <- this.species[1:nrow(this.species) %in% matches,]
-  table(minsfoo$Year,minsfoo$startDayOfYear)
-  
-  bl50[1:nrow(bl50) %in% matches, ]
-
-x <- 4
-foo <- unique(bl50[1:nrow(bl50) %in% matches, -1])
-table(foo$Year,foo$startDayOfYear)
-table(this.species$Year,this.species$sppListID)
-head(matches)
-table(matches$Year,matches$sppListID)
-
-head(min.dates)
-table(min.dates$Year,min.dates$sppListID)
-
+#Check that there is only one minimum date per year
+```{r}
+minpyear <- table(min.dates$Year, min.dates$sppListID)
+mpy.df <- data.frame(minpyear)
+mpy.df[mpy.df$Freq > 1,] #when we have ealiestBloomDate in the lapply, that's not unique so it picks a few duplicates, now fixed
 ```
+
 
 
 ggplot option after subset to earliest observation per year per species
@@ -214,6 +167,8 @@ ggplot(min.dates, aes(Year,Avg_Lo))+
 
 ```
 
+
+### Minimum Julian bloom date by year
 ```{r}
 ggplot(min.dates, aes(Year,startDayOfYear))+
   geom_point()+
@@ -225,18 +180,16 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
 
  summary(lm(min.dates$startDayOfYear~min.dates$Year))
 ```
+    
+    
+    
 Graph of all spp data by year
 
 ```{r}
 #bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
 #                header = TRUE, as.is=TRUE)   
 hist(min.dates$startDayOfYear)#need to log transform data
-logDay<-log(min.dates$startDayOfYear)
-hist(logDay)#better...still left-skewed
-invDay<-1/(min.dates$startDayOfYear)
-hist(invDay)#more even, but right-skewed
-sqrtDay<-sqrt(min.dates$startDayOfYear)
-hist(sqrtDay)#still left skewed
+
 plot(min.dates$Year,min.dates$startDayOfYear, main="First Collection Date for All 
 Species",xlab="Year", ylab="Julian Date")
 abline(lm(min.dates$startDayOfYear~min.dates$Year))
@@ -245,158 +198,120 @@ summary(lm(min.dates$startDayOfYear~min.dates$Year))
 #plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 ```
 
+
+
 #Regression per species
-#update regression loop to match pulling minimum dates above
+#update regression loop to match pulling minimum dates above    
+The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", or "Avg_Lo"...    
+
 ```{r}
-JulBloomDate <- function(vari){
+JulBloomDate <- function(variable){
+  namesID <- unique(min.dates$sppListID)
   
-  #setwd(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/R_figures_alpine"))
+  #Which column number has the variable of interest
+  colnum <- match(variable,names(min.dates))
   
-  namesID <- unique(bl50$sppListID)
-	rm(JYC)
-	JYC <- c()
-	stats<-c()
-
-	for(i in namesID){
-    spsub <- subset(bl50, sppListID == i)	
-		pyr <- tapply(spsub$startDayOfYear, spsub$Year, min)
-		val <- as.vector(pyr)
-		yrs <- as.numeric(names(pyr))
-		mins <- data.frame(cbind(julian = val, Year = yrs))
-    blnew <- c()
-    for(j in 1:nrow(mins)){
-      blnew <- rbind(blnew,
-                     subset(spsub,
-                            spsub$startDayOfYear == mins[j,1]
-                            & spsub$Year == mins[j,2]))
-      }
-    blnew <- blnew[!duplicated(blnew[,c('earliestBloomDate','Year')]),]	#get rid of duplicates for a year
-
-    #	jpeg(filename = paste(blnew$Scientific.Name[1], vari, ".jpg"),
-    #		quality = 100)
-    
-    #Which column number has the variable of interest
-    colnum <- match(vari,names(blnew))
-
-    #Plot and save the individual species plot
-    #	plot(blnew[,colnum], blnew$startDayOfYear, 
-    #		main = paste(blnew$Scientific.Name[1], vari, sep = ""), 
-    #		cex.main = 0.85,
-    #		xlab = paste(vari),
-    #		ylab = "Julian date of first bloom")
-    #abline(lm(blnew$startDayOfYear~blnew[,colnum]))
-    #dev.off()
-    #graphics.off()
-
+  JYC <- lapply(namesID, function(x){
+    blnew <- min.dates[min.dates$sppListID == x,]
     foo1 <- summary(lm(blnew$startDayOfYear~blnew[,colnum]))
     jul.yr.coef <- data.frame(cbind(data.frame(t(foo1$coefficients[2,])),
                                     foo1$coefficients[1,1],
                                     t(foo1$fstatistic),
                                     Species = blnew$Scientific.Name[1],
                                     foo1$adj.r.squared))
-    JYC <- rbind(JYC, jul.yr.coef)
-    }
+    })
   
+  JYC <- do.call(rbind, JYC)
   colnames(JYC) <- c("Slope", "StErr", "t.value", "p.value", "Intercept", 
-                     "F Stat", "numDF","denDF", "Species", "adj.r.squ")
-  
+                   "F Stat", "numDF","denDF", "Species", "adj.r.squ")
   JYC
-  }
+}
+```
+
+
+# "Year" regression per species    
+
+```{r}
+yr.bl <- JulBloomDate("Year")
+
+head(yr.bl)
+#subset that signficantchange over time
+yr.sig <- yr.bl[yr.bl$p.value < 0.05,]
+
+#merge the significant species with the min.dates species
+yr.sig.min <- merge(yr.sig, min.dates, by.x = "Species", by.y = "Scientific.Name")
+
+
+ggplot(yr.sig.min, aes(Year,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Year")+
+  xlab("Year")+
+  ylab("Julian Date")
+
+ summary(lm(yr.sig.min$startDayOfYear~yr.sig.min$Year))
+
 
 
 ```
 
+
+
+# "Raw_Precip" regression per species    
+
+```{r}
+precip.bl <- JulBloomDate("Raw_Precip")
+
+head(yr.bl)
+#subset that signficant change by precipitation
+precip.sig <- precip.bl[precip.bl$p.value < 0.05,]
+
+#merge the significant species with the min.dates species
+precip.sig.min <- merge(precip.sig, min.dates, by.x = "Species", by.y = "Scientific.Name")
+
+
+ggplot(precip.sig.min, aes(Raw_Precip,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by precipitation")+
+  xlab("Precipitation (mm)")+
+  ylab("Julian Date")
+
+ summary(lm(precip.sig.min$startDayOfYear~precip.sig.min$Year))
+
+
+
+```
 
 
 ########## Columns that you can use to compare to earliest bloom date (taken from "startDayOfYear")
-names(bl50)
-                
-#[11] "startDayOfYear"   [20] "Raw_Precip"              
-#[21] "Avg_Hi"                "Med_Hi"                  
-#[23] "Avg_Lo"                "Med_Lo"                  
-#[25] "Av_Temp"               "Med_Temp"  
+              
+#[11] "startDayOfYear"   [20] "Raw_Precip"                 
+#[21] "Avg_Hi"                "Med_Hi"                      
+#[23] "Avg_Lo"                "Med_Lo"                       
+#[25] "Av_Temp"               "Med_Temp"       
 
-#run each of the 4 following codes separately
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r}
-JulBloomDate("Year")
-	YearJYC <- JYC 
-```
-
-```{r}
-JulBloomDate("Raw_Precip")
-	RawPrecipJYC <- JYC 
-```
-
-
-
-```{r}
-JulBloomDate("Avg_Hi")
-	AvgHiJYC <- JYC 
-```
-
-```{r}
-JulBloomDate("Avg_Lo")
-	AvgLoJYC <- JYC 
-```
-
-then run each of these lines for each of the above & past in Excel
-```{r}
-write.table(JYC[1:100,], "clipboard", sep="\t", row.names = F, col.names = T)
-write.table(JYC[101:200,], "clipboard", sep="\t", row.names = F, col.names = T)
-write.table(JYC[201:290,], "clipboard", sep="\t", row.names = F, col.names = T)
-
-###
-
-
-## Categorize slope
-names(JYC)
-negsl <- subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
-
-# How many
-length(negsl)
-negsl$Species
-
-## Merge Year, precip, temp...
-merge(YearJYC, RawPrecipJYC, by = "Species")
-
-
-
-# cannot put the whole table, "JYC" into Excel w/ ctrl V - too big
-
-# species where bloom date is signficantly getting earlier (JYC is the whole table):
-subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
-earlier_bloom <- subset(JYC, JYC$Slope < 0 & JYC$p.value < 0.05)
-# puts table "earlier_bloom" into Exel w/ ctrl V
-write.table (earlier_bloom,"clipboard", sep = "\t", row.names = FALSE, col.names = TRUE)
-
-# species where bloom date is signficantly getting later: None
-subset(JYC, JYC$Slope > 0 & JYC$p.value < 0.05)
-later_bloom <- subset(JYC, JYC$Slope > 0 & JYC$p.value < 0.05)
-# puts table "later_bloom" into Exel w/ ctrl V
-write.table (later_bloom,"clipboard", sep = "\t", row.names = FALSE, col.names = TRUE)
-
-
-#################	###################################### ######################### ############################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #merge two tables
 merge(stats, bloom, by = intersect(names(x), names(y)),
       by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all,
