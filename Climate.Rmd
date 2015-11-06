@@ -6,7 +6,7 @@ output: word_document
 ---
 
 `install.packages("RCurl")` if you want it
-install.packages("ggplot2")   
+`install.packages("ggplot2")`   
 
 #Try a `rm(list=ls())` before running
 
@@ -252,6 +252,11 @@ ggplot(yr.sig.min, aes(Year,startDayOfYear))+
 
  summary(lm(yr.sig.min$startDayOfYear~yr.sig.min$Year))
 
+
+nrow(yr.sig) #53 species
+nrow(yr.sig[yr.sig$Slope > 0,]) # no species have later bloom dates over time
+nrow(yr.sig[yr.sig$adj.r.squ > 0.25,]) # 18 species have adj.r.squares over 0.25
+yr.sig[yr.sig$adj.r.squ > 0.25,]
 
 
 ```
