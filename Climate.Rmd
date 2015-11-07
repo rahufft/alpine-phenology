@@ -401,7 +401,7 @@ table(sig.ml.JYC$Variables)
 ```
 
 
-Species signficantly changing with the interaction of precipitation and low temperature
+# Species signficantly changing with the interaction of precipitation and low temperature
 ```{r}
 sig.interaction.JYC <- ml.JYC[ml.JYC$p.value < 0.05 & ml.JYC$Variables == "Raw_Precip:Avg_Lo",]
 
@@ -421,7 +421,7 @@ ggplot(sig.in.merge, aes(Year,startDayOfYear))+
 
 ```
 
-Signficant interaction species     
+# Signficant interaction species     
 Precip
 ```{r}
 ggplot(sig.in.merge, aes(Raw_Precip,startDayOfYear))+
@@ -456,30 +456,6 @@ ggplot(sig.in.merge, aes(Avg_Lo,startDayOfYear))+
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-#merge two tables
-merge(stats, bloom, by = intersect(names(x), names(y)),
-      by.x = by, by.y = by, all = FALSE, all.x = all, all.y = all,
-      sort = TRUE, suffixes = c(".x",".y"),
-      incomparables = NULL, ...)
-
-hist(bloom$startDayOfYear)
-plot(bloom$Year,bloom$startDayOfYear, main="First Collection Date for All Species",xlab="Year", ylab="Julian Date")
-abline(lm(bloom$startDayOfYear~bloom$Year))
-summary(lm(bloom$startDayOfYear~bloom$Year))
-#plot(lm(bloom$startDayOfYear ~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
-```
 
 
 
