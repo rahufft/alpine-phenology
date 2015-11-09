@@ -65,6 +65,15 @@ summary(lm(bloom$Avg_Lo~bloom$Year))
 #plot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 ```
 
+```{r
+#error...GDD object not found. It does show it as a numeric variable in bloom, but not able to run it
+#This section runs linear regression on GDD by Year
+#hist(GDD$Avg_Lo)
+plot(bloom$Year,bloom$Avg_Lo, main="Average Low Temperature by Year",xlab="Year", ylab="Degrees Celsius")
+abline(lm(bloom$Avg_Lo~bloom$Year))
+summary(lm(bloom$Avg_Lo~bloom$Year))
+#plot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+```
 
 ```{r}
 
@@ -242,7 +251,17 @@ ggplot(min.dates, aes(Raw_Precip, startDayOfYear))+
 summary(lm(startDayOfYear~Raw_Precip, data = min.dates))
 ```
 
+```{r}
+ggplot(min.dates, aes(GDD, startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by Growing Degree Days") +
+  xlab("GDD")+
+  ylab("Julian Date")
 
+summary(lm(startDayOfYear~GDD, data = min.dates))
+```
 
 
 ### Minimum Julian bloom date by year
@@ -260,7 +279,7 @@ ggplot(min.dates, aes(Year,startDayOfYear))+
     
     
     
-Graph of all spp data by year
+Graph of all spp data by year using plot instead of ggplot
 
 ```{r}
 #bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"),        
@@ -278,7 +297,7 @@ summary(lm(min.dates$startDayOfYear~min.dates$Year))
 
 
 #Regression per species
-#update regression loop to match pulling minimum dates above    
+#updated regression loop to match pulling minimum dates above    
 The variable can be set to which variable you want to use. Choose from "Year", "Raw_Precip", "Avg_Hi", or "Avg_Lo"...    
 
 ```{r}
