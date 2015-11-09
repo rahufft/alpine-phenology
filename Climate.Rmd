@@ -22,7 +22,7 @@ Bring csv in from the website
 I get an error: `Error in str.default(obj, ...) : invalid multibyte string 2` but will see if it matters...   
 looks like it's the lat long that didn't get in correctly
 ```{r, echo=FALSE}
-bloom<-read.csv(text = getURL("https://raw.githubusercontent.com/rahufft/alpine-phenology/master/QR_final_R_plant_climate_data.csv"))
+bloom<-read.csv(text = getURL("https://raw.githubusercontent.com/rahufft/alpine-phenology/master/QR_final_R_plant_climate_data_2.csv"))
 
 head(bloom)
 ```
@@ -37,8 +37,16 @@ bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.c
 #                header = TRUE, as.is=TRUE)   
 ```
 
-# Add growing degree days    
+# Add growing degree days   
+GDD=(Tmax+Tmin)/2 - Tbase    
+Tbase = -10   
+In the csv Tbase is 10, not negative 10. Which is correct?    
 
+```{r}
+Tbase <- -10
+bloom$GDD2 <- (bloom$Avg_Hi + bloom$Avg_Lo)/2 - Tbase 
+
+```
 
 
 ```{r}
@@ -65,14 +73,22 @@ summary(lm(bloom$Avg_Lo~bloom$Year))
 #plot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
 ```
 
-```{r
-#error...GDD object not found. It does show it as a numeric variable in bloom, but not able to run it
+
+#error...GDD object not found. It does show it as a numeric variable in bloom, but not able to run it    
+Didn't you just add GDD as a column so it's not a variable on it's own, it's bloom$GDD   
 #This section runs linear regression on GDD by Year
-#hist(GDD$Avg_Lo)
-plot(bloom$Year,bloom$Avg_Lo, main="Average Low Temperature by Year",xlab="Year", ylab="Degrees Celsius")
-abline(lm(bloom$Avg_Lo~bloom$Year))
-summary(lm(bloom$Avg_Lo~bloom$Year))
+```{r}
+hist(bloom$GDD)
+hist(bloom$GDD2) #if Tbase is -10
+plot(bloom$Year,bloom$GDD, main="Average Growing Degree Days by Year",xlab="Year", ylab="Degrees Celsius")
+abline(lm(bloom$GDD~bloom$Year))
+summary(lm(bloom$GDD~bloom$Year))
 #plot(lm(bloom$Avg_Lo~bloom$Year)) #check residuals for heteroscedasticity and nonlinearity
+
+
+ggplot(bloom, aes(Year,GDD)) +
+  geom_point()+
+  stat_smooth() #uses loess()
 ```
 
 ```{r}
@@ -110,7 +126,29 @@ head(namesID)
 names(bl50)
 
 #There are multiple bloom dates per year for many species. Want to narrow down to one, earliest, per year
-table(bl50$sppListID, bl50$Year)
+head(table(bl50$sppListID, bl50$Year))
+
+collections<-data.frame(table(bl50$sppListID,bl50$Year))
+
+ggplot(collections, aes(Var2, Freq))+
+  geom_boxplot()+
+  stat_smooth()+
+  xlab("Year")+
+  ylab("Collections per species")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+# collections per month
+collJ <- data.frame(table(bl50$sppListID, bl50$startDayOfYear))
+
+ggplot(collJ, aes(Var2, Freq, group =1))+
+  stat_smooth()+
+  xlab("Julian date")+
+  ylab("Collections per species")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+# collections getting 
 
 ```
 
@@ -124,7 +162,7 @@ identical(bl50, bloom)
 length(unique(bl50$sppListID))
 
 #Only need some columns of bloom:bl50 for minimum julian dates
-names(bl50[,c(4:5,11,19:26)])
+names(bl50[,c(4:5,11,19:28)])
 ```
 
 
@@ -136,7 +174,7 @@ Much faster and more corrector!
 ```{r}
 
 minJul.dates <- lapply(unique(bl50$sppListID), function(x){
-  this.species <- bl50[bl50$sppListID == x,c(4:5,11,19:26)]
+  this.species <- bl50[bl50$sppListID == x,c(4:5,11,19:28)]
   these.rows <- aggregate(startDayOfYear~Year, this.species, FUN=min)
   unique(merge(this.species, these.rows, by = c("startDayOfYear","Year")))
   })
@@ -147,7 +185,7 @@ head(minJul.dates[[219]])
 
 min.dates <- do.call(rbind,minJul.dates)
 
-table(min.dates$Year, min.dates$sppListID)
+head(table(min.dates$Year, min.dates$sppListID))
 
 ```
 
@@ -170,7 +208,7 @@ cor(min.dates[,-(1:4)])
 #  invalid graphics state"
 
 #fix error by running dev.off()
-dev.off()
+# dev.off()
 
 ```
 
@@ -223,8 +261,6 @@ summary(lm(startDayOfYear~Avg_Lo, data = min.dates))
 
 
 
-
-
 Average precipitation
 ```{r}
 ggplot(min.dates, aes(Year,Raw_Precip))+
@@ -249,6 +285,21 @@ ggplot(min.dates, aes(Raw_Precip, startDayOfYear))+
   ylab("Julian Date")
 
 summary(lm(startDayOfYear~Raw_Precip, data = min.dates))
+```
+
+
+GDD    
+```{r}
+ggplot(min.dates, aes(Year,GDD))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Average Growing Degree Days by Year")+
+  xlab("Year")+
+  ylab("Growing Degree Day")
+
+
+summary(lm(GDD~Year, data = min.dates))
 ```
 
 ```{r}
@@ -364,7 +415,7 @@ yr.sig[yr.sig$adj.r.squ > 0.25,]
 ```{r}
 precip.bl <- JulBloomDate("Raw_Precip")
 
-head(yr.bl)
+head(precip.bl)
 #subset that signficant change by precipitation
 precip.sig <- precip.bl[precip.bl$p.value < 0.05,]
 
@@ -385,6 +436,38 @@ ggplot(precip.sig.min, aes(Raw_Precip,startDayOfYear))+
 
 
 ```
+
+
+
+# "GDD" regression per species    
+
+```{r}
+gdd.bl <- JulBloomDate("GDD")
+
+head(gdd.bl)
+#subset that signficant change by GDD
+gdd.sig <- gdd.bl[gdd.bl$p.value < 0.05,]
+
+#merge the significant species with the min.dates species
+gdd.sig.min <- merge(gdd.sig, min.dates, by.x = "Species", by.y = "Scientific.Name")
+
+
+ggplot(gdd.sig.min, aes(GDD,startDayOfYear))+
+  geom_point()+
+  stat_smooth(method="lm")+
+  theme_bw()+
+  labs(title="Earliest Bloom Date by GDD")+
+  xlab("GDD")+
+  ylab("Julian Date")
+
+ summary(lm(gdd.sig.min$startDayOfYear~gdd.sig.min$Year))
+
+
+nrow(gdd.sig) #101 species
+nrow(gdd.sig[gdd.sig$Slope > 0,]) # no species have later bloom dates as the GDD increases
+
+```
+
 
 
 ########## Columns that you can use to compare to earliest bloom date (taken from "startDayOfYear")
@@ -474,15 +557,6 @@ ggplot(sig.in.merge, aes(Avg_Lo,startDayOfYear))+
  summary(lm(startDayOfYear~Avg_Lo, data = sig.in.merge))
 
 ```
-
-
-
-
-
-
-
-
-
 
 
 
