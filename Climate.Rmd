@@ -5,8 +5,10 @@ date: "August 28, 2015"
 output: word_document
 ---
 
-`install.packages("RCurl")` if you want it
-`install.packages("ggplot2")`   
+If you need these packages
+`install.packages("RCurl")`      
+`install.packages("ggplot2")`     
+`install.packages("data.table")`
 
 #Try a `rm(list=ls())` before running
 
@@ -34,6 +36,10 @@ bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.c
 #bloom<-read.csv(path.expand("P:/alpine-phenology/TB_tempPrecipData.csv"),        
 #                header = TRUE, as.is=TRUE)   
 ```
+
+# Add growing degree days    
+
+
 
 ```{r}
 #created new column that divides Raw_precip by 100 (see PRISM documentation) to get mm
