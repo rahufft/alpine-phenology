@@ -1,6 +1,6 @@
 ---
 title: "Alpine Phenology"
-author: "RA Hufft"
+author: "M. DePrenger-Levin and RA Hufft"
 date: "August 28, 2015"
 output: word_document
 ---
@@ -29,7 +29,7 @@ head(bloom)
 
 If not working to load from github:
 ```{r}
-bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"))
+#bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.csv"))
 
 #Bring in Q/All.Projects_by_species/aa_Spapefiles_Maps/aa_QGIS Projects/AlpinePhenologyproject/
 
@@ -38,13 +38,29 @@ bloom<-read.csv(path.expand("P:/alpine-phenology/QR_final_R_plant_climate_data.c
 ```
 
 # Add growing degree days   
-GDD=(Tmax+Tmin)/2 - Tbase    
-Tbase = -10   
-In the csv Tbase is 10, not negative 10. Which is correct?    
+White etal 2015     
+Cumulative Growing Degree Days 
+$\sum_{i=1}^{n} \left(T_{mean} - T_{base})$   
+$T_{base}$ should be the lowest air temperature when flowering will occur    
+Temperature Threshold and GDD models...
+    
+    
+In the csv Tbase is 10, not negative 10. Which is correct?     
+ McMaster and Wilhelm 1997:      
+Tbase = -10    
+Corn $T_{base} = 10$   
+Winter wheat $T_{base} = 0$   
+temperature below which the process of interest does not progress
+$$GDD = \frac{T_{MAX} + T_{MIN}}{2} - T_{BASE}$$   
+
+
 
 ```{r}
 Tbase <- -10
 bloom$GDD2 <- (bloom$Avg_Hi + bloom$Avg_Lo)/2 - Tbase 
+
+cumsum(bloom$GDD2) # need by day not by species, same data per species
+
 
 ```
 
@@ -74,12 +90,10 @@ summary(lm(bloom$Avg_Lo~bloom$Year))
 ```
 
 
-#error...GDD object not found. It does show it as a numeric variable in bloom, but not able to run it    
-Didn't you just add GDD as a column so it's not a variable on it's own, it's bloom$GDD   
 #This section runs linear regression on GDD by Year
 ```{r}
-hist(bloom$GDD)
-hist(bloom$GDD2) #if Tbase is -10
+#hist(bloom$GDD)
+#hist(bloom$GDD2) #if Tbase is -10
 plot(bloom$Year,bloom$GDD, main="Average Growing Degree Days by Year",xlab="Year", ylab="Degrees Celsius")
 abline(lm(bloom$GDD~bloom$Year))
 summary(lm(bloom$GDD~bloom$Year))
@@ -134,7 +148,7 @@ ggplot(collections, aes(Var2, Freq))+
   geom_boxplot()+
   stat_smooth()+
   xlab("Year")+
-  ylab("Collections per species")+
+  ylab("Collections species")+
   theme_bw()+
   theme(axis.text.x = element_text(angle=90, hjust=1))
 
@@ -199,7 +213,7 @@ mpy.df[mpy.df$Freq > 1,] #when we have ealiestBloomDate in the lapply, that's no
 
 ```{r}
 library(psych)
-cor.plot(cor(min.dates[,-(1:4)]), numbers = TRUE)
+#cor.plot(cor(min.dates[,-(1:4)]), numbers = TRUE)
 # should keep Raw_Precip and Avg_Lo
 
 cor(min.dates[,-(1:4)])
