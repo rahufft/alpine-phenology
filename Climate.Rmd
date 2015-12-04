@@ -9,6 +9,8 @@ If you need these packages
 `install.packages("RCurl")`      
 `install.packages("ggplot2")`     
 `install.packages("data.table")`
+'install.packages("curl")'
+install.packages("Rcpp")
 
 #Try a `rm(list=ls())` before running
 
@@ -16,6 +18,10 @@ If you need these packages
 library(RCurl)
 library(ggplot2)
 library(data.table)
+library(raster)
+require(rgdal)
+library(devtools)devtools::install_github("ropensci/prism")
+library(prism)
 ```
 
 Bring csv in from the website
@@ -572,5 +578,138 @@ ggplot(sig.in.merge, aes(Avg_Lo,startDayOfYear))+
 
 ```
 
+
+# extract climate data from .bil file time series    
+<https://github.com/ropensci/prism>  
+```{r}
+# slice out only elevations above 10,500" (3200m)
+latlongs <- read.delim(path.expand("Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/Sampling Points/LatLongabove3200m.txt"), sep=",")
+
+ll <- mapply(FUN = function(x,y){
+  c(x,y)
+  },
+  latlongs$Long,latlongs$Lat
+  )
+
+head(latlongs)
+ll[,1]
+
+prism_slice(ll[,1],ls_prism_data()[3,1]) # picks one max temp at one point
+```
+
+Into Climate_MEDL
+```{r, eval=FALSE}
+options(prism.path = "Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS Projects/Alpine Phenology Project/Climate_MEDL")
+# takes a long long long time!!! Don't run again!
+ get_prism_dailys(type="tmin", 
+                 minDate = "1981-01-01", 
+                 maxDate = "2011-12-31", keepZip = FALSE)
+
+
+ls_prism_data()[3:13,]
+ls_prism_data(absPath = TRUE)[3:13,] #to see path to where they are
+ls_prism_data(name = TRUE)[3:13,] #details of the file
+prism_image(ls_prism_data()[3,1])
+
+ls_prism_data()[3,]
+
+
+```
+
+Into Climate_MEDL
+```{r, eval=FALSE}
+# error in download length != reported length
+options(prism.path = "Q:/Research/All_Projects_by_Species/aa_Shapefiles_Maps/aa_QGIS 
+Projects/Alpine Phenology Project/Climate_MEDL")
+
+#get_prism_dailys(type="tmin", minDate = "1981-01-01", maxDate = "1981-02-01",
+#                 keepZip = FALSE, mode="wb") #but I don't think mode is a thing...
+
+
+# run 12/3/2015
+get_prism_dailys(type="tmax", 
+                 minDate = "1981-01-01", 
+                 maxDate = "2011-12-31", keepZip = FALSE)
+```
+
+
+Calculate average daily temperatures averaged over all locations above 3200m 10500"
+
+```{r, eval=FALSE}
+# combine by year
+sliceyear <- grep("1981",ls_prism_data()[,1],value = TRUE)
+sliceyear <- grep("tmin", sliceyear, value = TRUE) #only have tmin in this folder
+str(sliceyear)
+str(sliceyear[[1]][1])
+p <- prism_slice(c(-106.688031183,40.9074207425), sliceyear)
+prism_slice(ll[,1], sliceyear)
+p$data
+
+head(p$data)
+head(ll[,1:10])
+mean(p$data$data)
+
+# going through first 10 days of 1981
+ptest <- prism_slice(ll[,1],sliceyear[[1]][1:10]) 
+head(ptest)
+ptest$data
+
+length(ls_prism_data()[,1]) #22,644
+
+# test apply through a few points to get values for a mean
+test1981 <- lapply(1:5, function(y){
+  prism_slice(ll[,y], sliceyear[[1]][1:10])
+  })
+
+test1981[[1]]$data
+# data frame each $data part and then bind them
+test1981one <- do.call(rbind, lapply(test1981, function(x){
+  do.call(data.frame, x$data)
+  }))
+
+#aggregate for average over all the locations
+aggregate(data~date, data = test1981one, FUN = mean)
+
+# don't need to do by year because that data is in the output, can aggregate over
+avgTemps <- lapply(1981:2011, function(x){
+  sliceyear <- grep(as.character(x), ls_prism_data()[,1],value = TRUE)
+  sliceyear <- grep("tmin", sliceyear, value = TRUE)
+  lapply(latlong, function(y){
+    prism_slice(y,sliceyear)
+    })
+  })
+
+# lapply through all the points above 3200m and average per day
+# then lapply through each year with max and min and do calculation
+
+str(sliceyear[1])
+sliceyear[1]$data
+
+str(p)
+p + stat_smooth(method="lm", se = FALSE) + theme_bw()
+
+#really just want numbers that match
+which(ls_prism_data()$files %in% 
+                            (grep("1981", ls_prism_data()$files)))
+
+
+
+## pretend like one year is the max and one the min
+overlay(ls_prism_data)
+
+
+
+```
+
+
+```{r ignore use average instead, eval=FALSE}
+
+
+# for one year calculate the cumulative GDD for x=tmin, y=tmax, z=Tbase
+GDDCalc <- function(x,y,z){
+  return(cumsum(((y-x)/2)-z))
+}
+
+```
 
 
