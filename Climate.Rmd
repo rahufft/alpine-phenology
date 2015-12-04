@@ -670,31 +670,35 @@ test1981one <- do.call(rbind, lapply(test1981, function(x){
 #aggregate for average over all the locations
 aggregate(data~date, data = test1981one, FUN = mean)
 
-# don't need to do by year because that data is in the output, can aggregate over
-avgTemps <- lapply(1981:2011, function(x){
-  sliceyear <- grep(as.character(x), ls_prism_data()[,1],value = TRUE)
-  sliceyear <- grep("tmin", sliceyear, value = TRUE)
-  lapply(latlong, function(y){
-    prism_slice(y,sliceyear)
+length(ll) #2529 above 3200m points
+
+### Real one after above testing
+# can aggregate over date, lappy over min and max
+avgTemps <- lapply(c("tmin","tmax"), function(x){
+  sliceyear <- grep(x, ls_prism_data()[,1], value = TRUE)
+  slicedata <- lapply(1:length(ll), function(y){
+    prism_slice(ll[,y],sliceyear)
     })
+  do.call(rbind, lapply(
+    ( lapply(slicedata, function(y){
+      data.frame(y$data, Var = rownames(y$data))
+      }) ),
+    function(x){
+      do.call(data.frame, x)
+      })
+    )
   })
 
-# lapply through all the points above 3200m and average per day
-# then lapply through each year with max and min and do calculation
+str(avgTemps[[1]]) # min
+head(avgTemps[[2]]) # max
 
-str(sliceyear[1])
-sliceyear[1]$data
+```
 
-str(p)
-p + stat_smooth(method="lm", se = FALSE) + theme_bw()
-
-#really just want numbers that match
-which(ls_prism_data()$files %in% 
-                            (grep("1981", ls_prism_data()$files)))
+Calculate cumulative HDD per year
+```{r}
+# 1) grep per year
 
 
-
-## pretend like one year is the max and one the min
 overlay(ls_prism_data)
 
 
